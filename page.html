@@ -1,0 +1,68 @@
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Fractals with WebGL</title>
+
+<script type="text/javascript" src="main.js"></script>
+
+<!-- shader programs -->
+<script id="vertex shader" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec2 aLocation;
+	varying vec2 vLocation;
+	void main(void) {
+		gl_Position = vec4(aVertexPosition, 1.0);
+		vLocation = aLocation;
+	}
+</script>
+<script id="fragment shader" type="x-shader/x-fragment">
+	#define MAXITERATIONS 25
+
+	precision mediump float;
+	varying vec2 vLocation;
+
+	// complex number operations
+	float normQ(vec2 z) {
+		return dot(z, z);
+	}
+	vec2 square(vec2 z) {
+		return vec2(z[0]*z[0]-z[1]*z[1]
+							 ,z[0]*z[1]*2.0);
+	}
+
+	vec3 toColor(float val) {
+		if (val<0.25)
+			return vec3(val*4.0, 0.0, 0.0);
+		val -= 0.25;
+		if (val<0.25)
+		  return vec3(1.0-val*4.0, val*4.0, 0.0);
+		val -= 0.25;
+		if (val<0.25)
+		  return vec3(val*4.0, 1.0-val*4.0, val*4.0);
+		val -= 0.25;
+		return vec3(1.0, val*4.0, 1.0);
+	}
+
+	void main(void) {
+		vec2 z = vec2(0.0, 0.0);
+		vec2 c = vLocation;
+		int iterations=0;
+		for (int i=0; i<MAXITERATIONS; i++) {
+			z = square(z) + c;
+			if(normQ(z)>10.0) {
+				break;
+			}
+			iterations = i+1;
+		}
+		float value = float(iterations)/float(MAXITERATIONS);
+		gl_FragColor = vec4(toColor(value), 1.0);
+	}
+</script>
+</head>
+
+
+<body onload="onLoad();">
+<canvas id="webgl canvas" width=700 height=700 style="border: 1px solid black;">
+</canvas>
+</body>
+</html>
