@@ -129,6 +129,9 @@ function onWheel(event) {
 	if (event.detail) {
 		factor = 1+0.1*event.detail;
 	}
+	else if (event.wheelDelta) {
+		factor = 1+0.003*event.wheelDelta;
+	}
 	zoom(factor, fixpoint);
 }
 
