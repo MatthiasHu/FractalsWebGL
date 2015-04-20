@@ -5,6 +5,7 @@
 // global variables:
 var canvas;
 var gl = null; // the webgl context
+var loc = {lowerleft:{x:-2.1, y:-1.5}, scale:3};
 var vertexBuffer;
 var locationBuffer;
 var shaderLocations = {}; // will hold junctures to the shaders
@@ -55,6 +56,11 @@ function onLoad() {
 	gl.enableVertexAttribArray(shaderLocations.aLocation);
 
 	initBuffers();
+	updateLocationBuffer();
+
+	// listen for user input
+	canvas.addEventListener("mousewheel", onWheel, false);
+	canvas.addEventListener("DOMMouseScroll", onWheel, false);
 
 	render();
 	// setInterval(render, 100);
@@ -62,7 +68,7 @@ function onLoad() {
 
 
 function initBuffers() {
-	// initialize vertex buffer
+	// create and fill vertex buffer
 	vertexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 	var vertices = 
@@ -74,18 +80,23 @@ function initBuffers() {
 	gl.bufferData(gl.ARRAY_BUFFER,
 		new Float32Array(vertices),
 		gl.STATIC_DRAW);
-	// initialize location buffer
+	// create location buffer
 	locationBuffer = gl.createBuffer();
+}
+
+function updateLocationBuffer() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, locationBuffer);
+	var x = loc.lowerleft.x, y = loc.lowerleft.y;
+	var s = loc.scale;
 	var locationData =
-		[-2, -1.5
-		, 1, -1.5
-		,-2,  1.5
-		, 1,  1.5
+		[x   ,y
+		,x+s ,y
+		,x   ,y+s
+		,x+s ,y+s
 		];
 	gl.bufferData(gl.ARRAY_BUFFER,
 		new Float32Array(locationData),
-		gl.STATIC_DRAW);
+		gl.DYNAMIC_DRAW);
 }
 
 
@@ -102,3 +113,35 @@ function render() {
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
+
+
+// handle user input
+// -----------------
+
+// handle mouse wheel events
+function onWheel(event) {
+	var fixpoint =
+		{x: event.clientX/event.target.width
+		,y: 1-event.clientY/event.target.height};
+	var factor = 1.0;
+	if (event.detail) {
+		factor = 1+0.1*event.detail;
+	}
+	zoom(factor, fixpoint);
+}
+
+function zoom(factor, fixpoint) {
+	var oldX = loc.lowerleft.x;
+	var oldY = loc.lowerleft.y;
+	var oldScale = loc.scale;
+	var fp = // the fixpoint in complex plane coordinates
+		{x: oldX+oldScale*fixpoint.x
+		,y: oldY+oldScale*fixpoint.y}
+	loc.lowerleft =
+		{x: fp.x+(oldX-fp.x)*factor
+		,y: fp.y+(oldY-fp.y)*factor}
+	loc.scale = oldScale*factor;
+	// render new area
+	updateLocationBuffer();
+	render();
+}
