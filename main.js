@@ -120,9 +120,11 @@ function render() {
 
 // handle mouse wheel events
 function onWheel(event) {
+	event.preventDefault();
+	var target = event.target;
 	var fixpoint =
-		{x: event.clientX/event.target.width
-		,y: 1-event.clientY/event.target.height};
+		{x: (event.pageX-target.offsetLeft)/target.width
+		,y: 1-(event.pageY-target.offsetTop)/target.height};
 	var factor = 1.0;
 	if (event.detail) {
 		factor = 1+0.1*event.detail;
