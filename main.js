@@ -21,7 +21,7 @@ function FractalPanel(canvasID, julia) {
 	this.canvas = null;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
-	this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
+	this.loc = 0;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
 	this.juliaParameterFrozen = false;
@@ -56,10 +56,12 @@ function FractalPanel(canvasID, julia) {
 		this.gl.getUniformLocation(shaderProgram, "uJuliaParameter");
 
 	if (julia) {
+		this.loc = {lowerleft:{re:-2.0, im:-2.0}, scale:4};
 		this.gl.uniform1i(this.shaderLocations.uJulia, 1);
 		this.setJuliaParameter(0.0, 0.0);
 	}
 	else {
+		this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
 		this.gl.uniform1i(this.shaderLocations.uJulia, 0);
 	}
 
