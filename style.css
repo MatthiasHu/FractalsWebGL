@@ -1,0 +1,9 @@
+.fractal_panel {
+	float: left;
+}
+.fractal_canvas {
+	border: 1px solid black;
+}
+.iterations_input {
+	width: 70px;
+}

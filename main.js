@@ -3,8 +3,15 @@
 
 
 function onLoad() {
-	var mandel = new FractalPanel("Mandelbrot canvas", false);
-	var julia  = new FractalPanel("Julia canvas", true);
+	var get = function(id) {return document.getElementById(id);}
+	var mandel = new FractalPanel(
+		  get("Mandelbrot canvas")
+		, get("Mandelbrot max iterations")
+		, false);
+	var julia  = new FractalPanel(
+		  get("Julia canvas")
+		, get("Julia max iterations")
+		, true);
 	mandel.canvas.addEventListener(
 		  "mousemove"
 		, function(event) {onMouseMove(event, julia);}
@@ -17,21 +24,32 @@ function onLoad() {
 
 
 
-function FractalPanel(canvasID, julia) {
-	this.canvas = null;
+function FractalPanel(canvas, iterationsInput, julia) {
+	this.canvas = canvas;
+	this.iterationsInput = iterationsInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
-	this.loc = 0;
+	this.loc = null;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
+	this.julia = julia; // show Julia set? (Mandelbrot set otherwise)
+	this.juliaParameter = {re:0.0, im:0.0};
 	this.juliaParameterFrozen = false;
 
-	// find canvas to render in
-	this.canvas = document.getElementById(canvasID);
+	var initialMaxIterations = 100;
+
 	if (!this.canvas) {
-		throw new Error("Canvas \""+canvasID+"\" not found");
+		throw new Error("Fractal panel needs a canvas.");
 	}
 	this.canvas.fractalPanel = this;
+
+	this.iterationsInput.fractalPanel = this;
+	this.iterationsInput.value = initialMaxIterations;
+
+	if (this.julia)
+		this.loc = {lowerleft:{re:-2.0, im:-2.0}, scale:4};
+	else
+		this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
 
 	// try to initialize webgl
 	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
@@ -41,8 +59,49 @@ function FractalPanel(canvasID, julia) {
 		throw new Error("WebGL context couldn't be initialized.");
 	}
 
-	var shaderProgram = setupShaderProgram(this.gl);
+	this.setupShaderProgram(initialMaxIterations);
 
+	this.initBuffers();
+	this.updateLocationBuffer();
+
+	// listen for user input
+	this.canvas.addEventListener(
+		  "mousewheel"
+		, onWheel
+		, false);
+	this.canvas.addEventListener(
+		  "DOMMouseScroll"
+		, onWheel
+		, false);
+	this.iterationsInput.addEventListener(
+		  "input"
+		, onIterationsChanged
+		, false);
+
+	this.render();
+}
+
+FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
+	// compiling the shader program
+	var vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
+	this.gl.shaderSource(vertexShader,
+			document.getElementById("vertex shader").innerHTML);
+	this.gl.compileShader(vertexShader);
+	var fragmentShader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
+	var fragShaderScript =
+		document.getElementById("fragment shader");
+	// (passing in the iterations maximum)
+	this.gl.shaderSource(fragmentShader,
+		fragShaderScript.innerHTML.replace(/MAXITERATIONS/g, maxIterations));
+	this.gl.compileShader(fragmentShader);
+	var shaderProgram = this.gl.createProgram();
+	this.gl.attachShader(shaderProgram, vertexShader);
+	this.gl.attachShader(shaderProgram, fragmentShader);
+	this.gl.linkProgram(shaderProgram);
+	if (!this.gl.getProgramParameter(shaderProgram, this.gl.LINK_STATUS)) {
+		throw new Error("Error compiling/linking shader program.");
+	}
+	this.gl.useProgram(shaderProgram);
 	// get junctures to shaders
 	this.shaderLocations.aVertexPosition =
 		this.gl.getAttribLocation(shaderProgram, "aVertexPosition");
@@ -54,29 +113,14 @@ function FractalPanel(canvasID, julia) {
 		this.gl.getUniformLocation(shaderProgram, "uJulia");
 	this.shaderLocations.uJuliaParameter =
 		this.gl.getUniformLocation(shaderProgram, "uJuliaParameter");
-
-	if (julia) {
-		this.loc = {lowerleft:{re:-2.0, im:-2.0}, scale:4};
+	// initialize uniforms
+	if (this.julia) {
 		this.gl.uniform1i(this.shaderLocations.uJulia, 1);
-		this.setJuliaParameter(0.0, 0.0);
+		this.passJuliaParameter();
 	}
 	else {
-		this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
 		this.gl.uniform1i(this.shaderLocations.uJulia, 0);
 	}
-
-	this.initBuffers();
-	this.updateLocationBuffer();
-
-	// listen for user input
-	this.canvas.addEventListener("mousewheel"
-		, onWheel
-		, false);
-	this.canvas.addEventListener("DOMMouseScroll"
-		, onWheel
-		, false);
-
-	this.render();
 }
 
 FractalPanel.prototype.initBuffers = function() {
@@ -112,7 +156,12 @@ FractalPanel.prototype.updateLocationBuffer = function() {
 }
 
 FractalPanel.prototype.setJuliaParameter = function(re, im) {
-	this.gl.uniform2f(this.shaderLocations.uJuliaParameter, re, im);
+	this.juliaParameter = {re:re, im:im};
+	this.passJuliaParameter();
+}
+FractalPanel.prototype.passJuliaParameter = function() {
+	this.gl.uniform2f(this.shaderLocations.uJuliaParameter
+		, this.juliaParameter.re, this.juliaParameter.im);
 }
 
 FractalPanel.prototype.render = function() {
@@ -166,6 +215,17 @@ function onMouseDown(event, juliaPanel) {
 	juliaPanel.render();
 }
 
+function onIterationsChanged(event) {
+	var target = event.target;
+	var val = target.value;
+	val = parseInt(val);
+	if (val>0) {
+		target.value = val;
+		target.fractalPanel.setupShaderProgram(val);
+		target.fractalPanel.render();
+	}
+}
+
 function complexPlaneCoordinates(e) {
 	var t = e.target;
 	if (!t.fractalPanel) {
@@ -179,24 +239,4 @@ function complexPlaneCoordinates(e) {
 	var scale = t.fractalPanel.loc.scale;
 	return {re: z0.re + scale*normalized.x
 	       ,im: z0.im + scale*normalized.y}
-}
-
-function setupShaderProgram(gl) {
-	var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-	gl.shaderSource(vertexShader,
-			document.getElementById("vertex shader").innerHTML);
-	gl.compileShader(vertexShader);
-	var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader,
-			document.getElementById("fragment shader").innerHTML);
-	gl.compileShader(fragmentShader);
-	var shaderProgram = gl.createProgram();
-	gl.attachShader(shaderProgram, vertexShader);
-	gl.attachShader(shaderProgram, fragmentShader);
-	gl.linkProgram(shaderProgram);
-	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-		throw new Error("Error compiling/linking shader program.");
-	}
-	gl.useProgram(shaderProgram);
-	return shaderProgram;
 }

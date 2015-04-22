@@ -3,6 +3,8 @@
 <meta charset="utf-8"/>
 <title>Fractals with WebGL</title>
 
+<link rel="stylesheet" type="text/css" href="style.css"></link>
+
 <script type="text/javascript" src="main.js"></script>
 
 <!-- shader programs -->
@@ -16,8 +18,6 @@
 	}
 </script>
 <script id="fragment shader" type="x-shader/x-fragment">
-	#define MAXITERATIONS 70
-
 	precision mediump float;
 
 	uniform int uJulia; // Is a Julia set to be rendered? (>0)
@@ -60,6 +60,8 @@
 			c = vLocation;
 		}
 		int iterations=0;
+		// the actual maximum number of iterations is inserted
+		// by javascript code
 		for (int i=0; i<MAXITERATIONS; i++) {
 			if (normQ(z)<10.0) {
 				z = square(z) + c;
@@ -74,9 +76,19 @@
 
 
 <body onload="onLoad();">
-<canvas id="Mandelbrot canvas" width=700 height=700 style="border: 1px solid black;">
-</canvas>
-<canvas id="Julia canvas" width=700 height=700 style="border: 1px solid black;">
-</canvas>
+<div class="fractal_panel">
+<canvas id="Mandelbrot canvas" class="fractal_canvas" width=700 height=700>
+</canvas><br/>
+maximum iterations:
+<input type="number" id="Mandelbrot max iterations" class="iterations_input">
+</input>
+</div>
+<div class="fractal_panel">
+<canvas id="Julia canvas" class="fractal_canvas" width=700 height=700>
+</canvas><br/>
+maximum iterations:
+<input type="number" id="Julia max iterations" class="iterations_input">
+</input>
+</div>
 </body>
 </html>
