@@ -16,10 +16,14 @@
 	}
 </script>
 <script id="fragment shader" type="x-shader/x-fragment">
-	#define MAXITERATIONS 25
+	#define MAXITERATIONS 70
 
 	precision mediump float;
-	varying vec2 vLocation;
+
+	uniform int uJulia; // Is a Julia set to be rendered? (>0)
+			// Mandelbrot set otherwise. (<=0)
+	uniform vec2 uJuliaParameter;
+	varying vec2 vLocation; // Complex number at this fragment.
 
 	// complex number operations
 	float normQ(vec2 z) {
@@ -27,9 +31,10 @@
 	}
 	vec2 square(vec2 z) {
 		return vec2(z[0]*z[0]-z[1]*z[1]
-							 ,z[0]*z[1]*2.0);
+			   ,z[0]*z[1]*2.0);
 	}
 
+	// convert a value between 0 and 1 to a color
 	vec3 toColor(float val) {
 		if (val<0.25)
 			return vec3(val*4.0, 0.0, 0.0);
@@ -44,15 +49,22 @@
 	}
 
 	void main(void) {
-		vec2 z = vec2(0.0, 0.0);
-		vec2 c = vLocation;
+		vec2 z;
+		vec2 c;
+		if (uJulia>0) { // Julia set
+			z = vLocation;
+			c = uJuliaParameter;
+		}
+		else { // Mandelbrot set
+			z = vec2(0.0, 0.0);
+			c = vLocation;
+		}
 		int iterations=0;
 		for (int i=0; i<MAXITERATIONS; i++) {
-			z = square(z) + c;
-			if(normQ(z)>10.0) {
-				break;
+			if (normQ(z)<10.0) {
+				z = square(z) + c;
+				iterations = i;
 			}
-			iterations = i+1;
 		}
 		float value = float(iterations)/float(MAXITERATIONS);
 		gl_FragColor = vec4(toColor(value), 1.0);
@@ -62,7 +74,9 @@
 
 
 <body onload="onLoad();">
-<canvas id="webgl canvas" width=700 height=700 style="border: 1px solid black;">
+<canvas id="Mandelbrot canvas" width=700 height=700 style="border: 1px solid black;">
+</canvas>
+<canvas id="Julia canvas" width=700 height=700 style="border: 1px solid black;">
 </canvas>
 </body>
 </html>
