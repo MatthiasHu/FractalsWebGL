@@ -4,23 +4,16 @@
 
 function onLoad() {
 	var get = function(id) {return document.getElementById(id);}
-	var mandel = new FractalPanel(
+	new FractalPanel(
 		  get("fractal canvas")
 		, get("max iterations"));
-	mandel.canvas.addEventListener(
-		  "mousemove"
-		, function(event) {onMouseMove(event);}
-		, false);
-	mandel.canvas.addEventListener(
-		  "mousedown"
-		, function(event) {onMouseDown(event);}
-		, false);
 }
 
 
 
 function FractalPanel(canvas, iterationsInput) {
 	this.canvas = canvas;
+	this.lastMousePos = {x:0, y:0};
 	this.iterationsInput = iterationsInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
@@ -38,7 +31,7 @@ function FractalPanel(canvas, iterationsInput) {
 	this.iterationsInput.fractalPanel = this;
 	this.iterationsInput.value = initialMaxIterations;
 
-	this.loc = {lowerleft:{zre:0, zim:0, cre:-2.1, cim:-1.5}, scale:3};
+	this.loc = {center:{zre:0, zim:0, cre:-0.6, cim:0}, scale:1.5};
 
 	// try to initialize webgl
 	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
@@ -54,17 +47,28 @@ function FractalPanel(canvas, iterationsInput) {
 	this.updateLocationBuffer();
 
 	// listen for user input
+	var that = this;
+	// (workaround to make member variables accessible
+	// in the event handlers)
 	this.canvas.addEventListener(
 		  "mousewheel"
-		, onWheel
+		, function(event) {that.onWheel(event);}
 		, false);
 	this.canvas.addEventListener(
 		  "DOMMouseScroll"
-		, onWheel
+		, function(event) {that.onWheel(event);}
+		, false);
+	this.canvas.addEventListener(
+		  "mousemove"
+		, function(event) {that.onMouseMove(event);}
+		, false);
+	this.canvas.addEventListener(
+		  "mousedown"
+		, function(event) {that.onMouseDown(event);}
 		, false);
 	this.iterationsInput.addEventListener(
 		  "input"
-		, onIterationsChanged
+		, function(event) {that.onIterationsChanged(event);}
 		, false);
 
 	this.render();
@@ -119,13 +123,13 @@ FractalPanel.prototype.initBuffers = function() {
 
 FractalPanel.prototype.updateLocationBuffer = function() {
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
-	var ll = this.loc.lowerleft;
+	var c = this.loc.center;
 	var s = this.loc.scale;
 	var locationData =
-		[ ll.zre, ll.zim, ll.cre  , ll.cim
-		, ll.zre, ll.zim, ll.cre+s, ll.cim
-		, ll.zre, ll.zim, ll.cre  , ll.cim+s
-		, ll.zre, ll.zim, ll.cre+s, ll.cim+s
+		[ c.zre, c.zim, c.cre-s, c.cim-s
+		, c.zre, c.zim, c.cre+s, c.cim-s
+		, c.zre, c.zim, c.cre-s, c.cim+s
+		, c.zre, c.zim, c.cre+s, c.cim+s
 		];
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(locationData),
@@ -142,23 +146,13 @@ FractalPanel.prototype.render = function() {
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 }
 
-FractalPanel.prototype.zoom = function(factor, fixpoint) {
-	var oldX = this.loc.lowerleft.cre;
-	var oldY = this.loc.lowerleft.cim;
-	var oldScale = this.loc.scale;
-	this.loc.lowerleft =
-		{cre: fixpoint.re+(oldX-fixpoint.re)*factor
-		,cim: fixpoint.im+(oldY-fixpoint.im)*factor
-		,zre: 0
-		,zim: 0}
-	this.loc.scale = oldScale*factor;
-	// render new area
+FractalPanel.prototype.zoom = function(factor) {
+	this.loc.scale *= factor;
 	this.updateLocationBuffer();
 }
 
-function onWheel(event) {
+FractalPanel.prototype.onWheel = function(event) {
 	event.preventDefault();
-	var target = event.target;
 	var factor = 1.0;
 	if (event.detail) {
 		factor = 1+0.1*event.detail;
@@ -166,18 +160,17 @@ function onWheel(event) {
 	else if (event.wheelDelta) {
 		factor = 1+0.003*event.wheelDelta;
 	}
-	target.fractalPanel.zoom(factor
-		, complexPlaneCoordinates(event));
-	target.fractalPanel.render();
+	this.zoom(factor);
+	this.render();
 }
 
-function onMouseMove(event) {
+FractalPanel.prototype.onMouseMove = function(event) {
 }
 
-function onMouseDown(event) {
+FractalPanel.prototype.onMouseDown = function(event) {
 }
 
-function onIterationsChanged(event) {
+FractalPanel.prototype.onIterationsChanged = function(event) {
 	var target = event.target;
 	var val = target.value;
 	val = parseInt(val);
@@ -188,17 +181,11 @@ function onIterationsChanged(event) {
 	}
 }
 
-function complexPlaneCoordinates(e) {
+function normalizeEventCoordinates(e) {
 	var t = e.target;
-	if (!t.fractalPanel) {
-		throw new Error("Event target is not associated"
-				+" to a fractal panel.");
-	}
-	var normalized =
-		{x: (e.pageX-t.offsetLeft)/t.width
-		,y: 1-(e.pageY-t.offsetTop)/t.height};
-	var z0 = t.fractalPanel.loc.lowerleft;
-	var scale = t.fractalPanel.loc.scale;
-	return {re: z0.cre + scale*normalized.x
-	       ,im: z0.cim + scale*normalized.y}
+	var res =
+		{ x: (e.pageX-t.offsetLeft)/t.width
+		, y: 1-(e.pageY-t.offsetTop)/t.height
+		};
+  return res;
 }
