@@ -163,22 +163,31 @@ FractalPanel.prototype.zoom = function(factor) {
 
 FractalPanel.prototype.onWheel = function(event) {
 	event.preventDefault();
-	var factor = 1.0;
+	var delta = 0;
 	if (event.detail) {
-		factor = 1+0.1*event.detail;
+		delta = event.detail;
 	}
 	else if (event.wheelDelta) {
-		factor = 1+0.003*event.wheelDelta;
+		delta = -0.025*event.wheelDelta;
 	}
-	this.zoom(factor);
-	this.render();
+	if (event.shiftKey) {
+		this.rotate("x", "y", Math.PI*2/120*delta);
+		this.render();
+	}
+	else {
+		var factor = Math.exp(0.1*delta);
+		this.zoom(factor);
+		this.render();
+	}
 }
 
 FractalPanel.prototype.onMouseMove = function(event) {
 	var d = this.mouseDelta(event);
 	if (event.buttons==1) { // left button
 		if (event.shiftKey) {
-			
+			this.rotate("x", "z", d.x*Math.PI/2);
+			this.rotate("y", "w", d.y*Math.PI/2);
+			this.render();
 		}
 		else {
 			this.move("x", -d.x*this.loc.scale);
@@ -208,6 +217,11 @@ FractalPanel.prototype.mouseDelta = function(e) {
 FractalPanel.prototype.move = function(axis, d) {
 	this.loc.center =
 		add4d(this.loc.center, mult4d(d, this.loc[axis]));
+}
+FractalPanel.prototype.rotate = function(axis1, axis2, alpha) {
+	var vals = rot4d(this.loc[axis1], this.loc[axis2], alpha);
+	this.loc[axis1] = vals[0];
+	this.loc[axis2] = vals[1];
 }
 
 FractalPanel.prototype.onClick = function(event) {
@@ -245,6 +259,14 @@ function add4d(v, w) {
 		, cim: v.cim + w.cim
 		}
 	return res;
+}
+
+function rot4d(v, w, alpha) {
+	var newv =
+		add4d(mult4d(Math.cos(alpha), v), mult4d(-Math.sin(alpha), w));
+	var neww =
+		add4d(mult4d(Math.sin(alpha), v), mult4d(Math.cos(alpha), w));
+	return [newv, neww];
 }
 
 function toArray4d(v) {
