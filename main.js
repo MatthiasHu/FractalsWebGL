@@ -35,6 +35,8 @@ function FractalPanel(canvas, iterationsInput) {
 		  center: {zre:0, zim:0, cre:0, cim:0}
 		, x: {zre:0, zim:0, cre:1, cim:0}
 		, y: {zre:0, zim:0, cre:0, cim:1}
+		, z: {zre:1, zim:0, cre:0, cim:0}
+		, w: {zre:0, zim:1, cre:0, cim:0}
 		, scale:2};
 
 	// try to initialize webgl
@@ -179,12 +181,15 @@ FractalPanel.prototype.onMouseMove = function(event) {
 			
 		}
 		else {
-			this.moveXY(-d.x*this.loc.scale, -d.y*this.loc.scale);
+			this.move("x", -d.x*this.loc.scale);
+			this.move("y", -d.y*this.loc.scale);
 			this.render();
 		}
 	}
 	if (event.buttons==4) { // middle button
-		
+		this.move("z", -d.x*this.loc.scale);
+		this.move("w", -d.y*this.loc.scale);
+		this.render();
 	}
 }
 
@@ -200,9 +205,9 @@ FractalPanel.prototype.mouseDelta = function(e) {
   return res;
 }
 
-FractalPanel.prototype.moveXY = function(dx, dy) {
-	this.loc.center = add4d(this.loc.center, mult4d(dx, this.loc.x));
-	this.loc.center = add4d(this.loc.center, mult4d(dy, this.loc.y));
+FractalPanel.prototype.move = function(axis, d) {
+	this.loc.center =
+		add4d(this.loc.center, mult4d(d, this.loc[axis]));
 }
 
 FractalPanel.prototype.onClick = function(event) {
