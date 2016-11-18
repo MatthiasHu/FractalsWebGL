@@ -20,9 +20,6 @@
 <script id="fragment shader" type="x-shader/x-fragment">
 	precision mediump float;
 
-	uniform int uJulia; // Is a Julia set to be rendered? (>0)
-			// Mandelbrot set otherwise. (<=0)
-	uniform vec2 uJuliaParameter;
 	varying vec2 vLocation; // Complex number at this fragment.
 
 	// complex number operations
@@ -49,16 +46,8 @@
 	}
 
 	void main(void) {
-		vec2 z;
-		vec2 c;
-		if (uJulia>0) { // Julia set
-			z = vLocation;
-			c = uJuliaParameter;
-		}
-		else { // Mandelbrot set
-			z = vec2(0.0, 0.0);
-			c = vLocation;
-		}
+		vec2 z = vec2(0.0, 0.0);
+		vec2 c = vLocation;
 		int iterations=0;
 		// the actual maximum number of iterations is inserted
 		// by javascript code
@@ -76,19 +65,14 @@
 
 
 <body onload="onLoad();">
+
 <div class="fractal_panel">
-<canvas id="Mandelbrot canvas" class="fractal_canvas" width=700 height=700>
+<canvas id="fractal canvas" class="fractal_canvas" width=700 height=700>
 </canvas><br/>
 maximum iterations:
-<input type="number" id="Mandelbrot max iterations" class="iterations_input">
+<input type="number" id="max iterations" class="iterations_input">
 </input>
 </div>
-<div class="fractal_panel">
-<canvas id="Julia canvas" class="fractal_canvas" width=700 height=700>
-</canvas><br/>
-maximum iterations:
-<input type="number" id="Julia max iterations" class="iterations_input">
-</input>
-</div>
+
 </body>
 </html>

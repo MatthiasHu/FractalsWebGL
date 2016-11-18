@@ -5,26 +5,21 @@
 function onLoad() {
 	var get = function(id) {return document.getElementById(id);}
 	var mandel = new FractalPanel(
-		  get("Mandelbrot canvas")
-		, get("Mandelbrot max iterations")
-		, false);
-	var julia  = new FractalPanel(
-		  get("Julia canvas")
-		, get("Julia max iterations")
-		, true);
+		  get("fractal canvas")
+		, get("max iterations"));
 	mandel.canvas.addEventListener(
 		  "mousemove"
-		, function(event) {onMouseMove(event, julia);}
+		, function(event) {onMouseMove(event);}
 		, false);
 	mandel.canvas.addEventListener(
 		  "mousedown"
-		, function(event) {onMouseDown(event, julia);}
+		, function(event) {onMouseDown(event);}
 		, false);
 }
 
 
 
-function FractalPanel(canvas, iterationsInput, julia) {
+function FractalPanel(canvas, iterationsInput) {
 	this.canvas = canvas;
 	this.iterationsInput = iterationsInput;
 	this.gl = null;
@@ -32,9 +27,6 @@ function FractalPanel(canvas, iterationsInput, julia) {
 	this.loc = null;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
-	this.julia = julia; // show Julia set? (Mandelbrot set otherwise)
-	this.juliaParameter = {re:0.0, im:0.0};
-	this.juliaParameterFrozen = false;
 
 	var initialMaxIterations = 100;
 
@@ -46,10 +38,7 @@ function FractalPanel(canvas, iterationsInput, julia) {
 	this.iterationsInput.fractalPanel = this;
 	this.iterationsInput.value = initialMaxIterations;
 
-	if (this.julia)
-		this.loc = {lowerleft:{re:-2.0, im:-2.0}, scale:4};
-	else
-		this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
+	this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
 
 	// try to initialize webgl
 	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
@@ -109,18 +98,6 @@ FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
 	this.shaderLocations.aLocation =
 		this.gl.getAttribLocation(shaderProgram, "aLocation");
 	this.gl.enableVertexAttribArray(this.shaderLocations.aLocation);
-	this.shaderLocations.uJulia =
-		this.gl.getUniformLocation(shaderProgram, "uJulia");
-	this.shaderLocations.uJuliaParameter =
-		this.gl.getUniformLocation(shaderProgram, "uJuliaParameter");
-	// initialize uniforms
-	if (this.julia) {
-		this.gl.uniform1i(this.shaderLocations.uJulia, 1);
-		this.passJuliaParameter();
-	}
-	else {
-		this.gl.uniform1i(this.shaderLocations.uJulia, 0);
-	}
 }
 
 FractalPanel.prototype.initBuffers = function() {
@@ -153,15 +130,6 @@ FractalPanel.prototype.updateLocationBuffer = function() {
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(locationData),
 		this.gl.DYNAMIC_DRAW);
-}
-
-FractalPanel.prototype.setJuliaParameter = function(re, im) {
-	this.juliaParameter = {re:re, im:im};
-	this.passJuliaParameter();
-}
-FractalPanel.prototype.passJuliaParameter = function() {
-	this.gl.uniform2f(this.shaderLocations.uJuliaParameter
-		, this.juliaParameter.re, this.juliaParameter.im);
 }
 
 FractalPanel.prototype.render = function() {
@@ -201,18 +169,10 @@ function onWheel(event) {
 	target.fractalPanel.render();
 }
 
-function onMouseMove(event, juliaPanel) {
-	if (juliaPanel.juliaParameterFrozen) return;
-	var z = complexPlaneCoordinates(event);
-	juliaPanel.setJuliaParameter(z.re, z.im);
-	juliaPanel.render();
+function onMouseMove(event) {
 }
 
-function onMouseDown(event, juliaPanel) {
-	juliaPanel.juliaParameterFrozen = !juliaPanel.juliaParameterFrozen;
-	var z = complexPlaneCoordinates(event);
-	juliaPanel.setJuliaParameter(z.re, z.im);
-	juliaPanel.render();
+function onMouseDown(event) {
 }
 
 function onIterationsChanged(event) {
