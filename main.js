@@ -24,7 +24,7 @@ function FractalPanel(canvas, iterationsInput) {
 	this.iterationsInput = iterationsInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
-	this.loc = null;
+	this.loc = null; // the pose in 4d space (2d complex space)
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
 
@@ -38,7 +38,7 @@ function FractalPanel(canvas, iterationsInput) {
 	this.iterationsInput.fractalPanel = this;
 	this.iterationsInput.value = initialMaxIterations;
 
-	this.loc = {lowerleft:{re:-2.1, im:-1.5}, scale:3};
+	this.loc = {lowerleft:{zre:0, zim:0, cre:-2.1, cim:-1.5}, scale:3};
 
 	// try to initialize webgl
 	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
@@ -119,13 +119,13 @@ FractalPanel.prototype.initBuffers = function() {
 
 FractalPanel.prototype.updateLocationBuffer = function() {
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
-	var x = this.loc.lowerleft.re, y = this.loc.lowerleft.im;
+	var ll = this.loc.lowerleft;
 	var s = this.loc.scale;
 	var locationData =
-		[x   ,y
-		,x+s ,y
-		,x   ,y+s
-		,x+s ,y+s
+		[ ll.zre, ll.zim, ll.cre  , ll.cim
+		, ll.zre, ll.zim, ll.cre+s, ll.cim
+		, ll.zre, ll.zim, ll.cre  , ll.cim+s
+		, ll.zre, ll.zim, ll.cre+s, ll.cim+s
 		];
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(locationData),
@@ -138,17 +138,19 @@ FractalPanel.prototype.render = function() {
 		3, this.gl.FLOAT, false, 0, 0);
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
 	this.gl.vertexAttribPointer(this.shaderLocations.aLocation,
-		2, this.gl.FLOAT, false, 0, 0);
+		4, this.gl.FLOAT, false, 0, 0);
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 }
 
 FractalPanel.prototype.zoom = function(factor, fixpoint) {
-	var oldX = this.loc.lowerleft.re;
-	var oldY = this.loc.lowerleft.im;
+	var oldX = this.loc.lowerleft.cre;
+	var oldY = this.loc.lowerleft.cim;
 	var oldScale = this.loc.scale;
 	this.loc.lowerleft =
-		{re: fixpoint.re+(oldX-fixpoint.re)*factor
-		,im: fixpoint.im+(oldY-fixpoint.im)*factor}
+		{cre: fixpoint.re+(oldX-fixpoint.re)*factor
+		,cim: fixpoint.im+(oldY-fixpoint.im)*factor
+		,zre: 0
+		,zim: 0}
 	this.loc.scale = oldScale*factor;
 	// render new area
 	this.updateLocationBuffer();
@@ -197,6 +199,6 @@ function complexPlaneCoordinates(e) {
 		,y: 1-(e.pageY-t.offsetTop)/t.height};
 	var z0 = t.fractalPanel.loc.lowerleft;
 	var scale = t.fractalPanel.loc.scale;
-	return {re: z0.re + scale*normalized.x
-	       ,im: z0.im + scale*normalized.y}
+	return {re: z0.cre + scale*normalized.x
+	       ,im: z0.cim + scale*normalized.y}
 }
