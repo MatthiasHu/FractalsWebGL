@@ -31,7 +31,11 @@ function FractalPanel(canvas, iterationsInput) {
 	this.iterationsInput.fractalPanel = this;
 	this.iterationsInput.value = initialMaxIterations;
 
-	this.loc = {center:{zre:0, zim:0, cre:-0.6, cim:0}, scale:1.5};
+	this.loc = {
+		  center: {zre:0, zim:0, cre:0, cim:0}
+		, x: {zre:0, zim:0, cre:1, cim:0}
+		, y: {zre:0, zim:0, cre:0, cim:1}
+		, scale:2};
 
 	// try to initialize webgl
 	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
@@ -63,8 +67,8 @@ function FractalPanel(canvas, iterationsInput) {
 		, function(event) {that.onMouseMove(event);}
 		, false);
 	this.canvas.addEventListener(
-		  "mousedown"
-		, function(event) {that.onMouseDown(event);}
+		  "click"
+		, function(event) {that.onClick(event);}
 		, false);
 	this.iterationsInput.addEventListener(
 		  "input"
@@ -124,19 +128,24 @@ FractalPanel.prototype.initBuffers = function() {
 FractalPanel.prototype.updateLocationBuffer = function() {
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
 	var c = this.loc.center;
+	var x = this.loc.x;
+	var y = this.loc.y;
 	var s = this.loc.scale;
-	var locationData =
-		[ c.zre, c.zim, c.cre-s, c.cim-s
-		, c.zre, c.zim, c.cre+s, c.cim-s
-		, c.zre, c.zim, c.cre-s, c.cim+s
-		, c.zre, c.zim, c.cre+s, c.cim+s
-		];
+	var locationData = [];
+	for (var i=-1; i<=1; i+=2) {
+		for (var j=-1; j<=1; j+=2) {
+			locationData = locationData.concat(toArray4d(
+				add4d(add4d(c, mult4d(j*s, x)), mult4d(i*s, y))
+				));
+		}
+	}
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(locationData),
 		this.gl.DYNAMIC_DRAW);
 }
 
 FractalPanel.prototype.render = function() {
+	this.updateLocationBuffer();
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
 	this.gl.vertexAttribPointer(this.shaderLocations.aVertexPosition,
 		3, this.gl.FLOAT, false, 0, 0);
@@ -148,7 +157,6 @@ FractalPanel.prototype.render = function() {
 
 FractalPanel.prototype.zoom = function(factor) {
 	this.loc.scale *= factor;
-	this.updateLocationBuffer();
 }
 
 FractalPanel.prototype.onWheel = function(event) {
@@ -165,9 +173,39 @@ FractalPanel.prototype.onWheel = function(event) {
 }
 
 FractalPanel.prototype.onMouseMove = function(event) {
+	var d = this.mouseDelta(event);
+	if (event.buttons==1) { // left button
+		if (event.shiftKey) {
+			
+		}
+		else {
+			this.moveXY(-d.x*this.loc.scale, -d.y*this.loc.scale);
+			this.render();
+		}
+	}
+	if (event.buttons==4) { // middle button
+		
+	}
 }
 
-FractalPanel.prototype.onMouseDown = function(event) {
+FractalPanel.prototype.mouseDelta = function(e) {
+	var t = e.target;
+	var pos =
+		{ x: (e.pageX-t.offsetLeft)/t.width*2 -1
+		, y: 1- (e.pageY-t.offsetTop)/t.height*2
+		};
+	var old = this.lastMousePos;
+	this.lastMousePos = pos;
+	var res = {x: pos.x-old.x, y: pos.y-old.y};
+  return res;
+}
+
+FractalPanel.prototype.moveXY = function(dx, dy) {
+	this.loc.center = add4d(this.loc.center, mult4d(dx, this.loc.x));
+	this.loc.center = add4d(this.loc.center, mult4d(dy, this.loc.y));
+}
+
+FractalPanel.prototype.onClick = function(event) {
 }
 
 FractalPanel.prototype.onIterationsChanged = function(event) {
@@ -181,11 +219,29 @@ FractalPanel.prototype.onIterationsChanged = function(event) {
 	}
 }
 
-function normalizeEventCoordinates(e) {
-	var t = e.target;
+
+// 4d vector operations
+
+function mult4d(s, v) {
 	var res =
-		{ x: (e.pageX-t.offsetLeft)/t.width
-		, y: 1-(e.pageY-t.offsetTop)/t.height
-		};
-  return res;
+		{ zre: s*v.zre
+		, zim: s*v.zim
+		, cre: s*v.cre
+		, cim: s*v.cim
+		}
+	return res;
+}
+
+function add4d(v, w) {
+	var res =
+		{ zre: v.zre + w.zre
+		, zim: v.zim + w.zim
+		, cre: v.cre + w.cre
+		, cim: v.cim + w.cim
+		}
+	return res;
+}
+
+function toArray4d(v) {
+	return [v.zre, v.zim, v.cre, v.cim];
 }
