@@ -1,9 +1,21 @@
 .fractal_panel {
 	float: left;
 }
+.controls_panel {
+	float: left;
+	padding: 10px;
+}
 .fractal_canvas {
 	border: 1px solid black;
 }
 .iterations_input {
 	width: 70px;
+}
+.controls_table {
+	border-collapse: collapse;
+}
+td {
+	min-width: 100px;
+	border: 1px solid black;
+	padding: 4px;
 }
