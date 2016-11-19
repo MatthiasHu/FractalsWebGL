@@ -13,7 +13,7 @@ function onLoad() {
 
 function FractalPanel(canvas, iterationsInput) {
 	this.canvas = canvas;
-	this.lastMousePos = {x:0, y:0};
+	this.mouse = {lastPosition: {x:0, y:0}, upIsClick: false};
 	this.iterationsInput = iterationsInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
@@ -69,8 +69,12 @@ function FractalPanel(canvas, iterationsInput) {
 		, function(event) {that.onMouseMove(event);}
 		, false);
 	this.canvas.addEventListener(
-		  "click"
-		, function(event) {that.onClick(event);}
+		  "mousedown"
+		, function(event) {that.onMouseDown(event);}
+		, false);
+	this.canvas.addEventListener(
+		  "mouseup"
+		, function(event) {that.onMouseUp(event);}
 		, false);
 	this.iterationsInput.addEventListener(
 		  "input"
@@ -203,15 +207,21 @@ FractalPanel.prototype.onMouseMove = function(event) {
 }
 
 FractalPanel.prototype.mouseDelta = function(e) {
+	this.mouse.upIsClick = false;
+	var pos = normalizedMousePosition(e);
+	var old = this.mouse.lastPosition;
+	this.mouse.lastPosition = pos;
+	var res = {x: pos.x-old.x, y: pos.y-old.y};
+  return res;
+}
+
+function normalizedMousePosition(e) {
 	var t = e.target;
-	var pos =
+	var res =
 		{ x: (e.pageX-t.offsetLeft)/t.width*2 -1
 		, y: 1- (e.pageY-t.offsetTop)/t.height*2
 		};
-	var old = this.lastMousePos;
-	this.lastMousePos = pos;
-	var res = {x: pos.x-old.x, y: pos.y-old.y};
-  return res;
+	return res;
 }
 
 FractalPanel.prototype.move = function(axis, d) {
@@ -224,7 +234,21 @@ FractalPanel.prototype.rotate = function(axis1, axis2, alpha) {
 	this.loc[axis2] = vals[1];
 }
 
-FractalPanel.prototype.onClick = function(event) {
+FractalPanel.prototype.onMouseDown = function(event) {
+	if (event.buttons==1 && !event.shiftKey) { // only left button
+		this.mouse.upIsClick = true;
+	}
+	else {
+		this.mouse.upIsClick = false;
+	}
+}
+FractalPanel.prototype.onMouseUp = function(event) {
+	if (this.mouse.upIsClick && !event.shiftKey) {
+		var p = normalizedMousePosition(event);
+		this.move("x", p.x*this.loc.scale);
+		this.move("y", p.y*this.loc.scale);
+		this.render();
+	}
 }
 
 FractalPanel.prototype.onIterationsChanged = function(event) {
