@@ -33,16 +33,22 @@
 
 	// convert a value between 0 and 1 to a color
 	vec3 toColor(float val) {
-		if (val<0.25)
-			return vec3(val*4.0, 0.0, 0.0);
-		val -= 0.25;
-		if (val<0.25)
-		  return vec3(1.0-val*4.0, val*4.0, 0.0);
-		val -= 0.25;
-		if (val<0.25)
-		  return vec3(val*4.0, 1.0-val*4.0, val*4.0);
-		val -= 0.25;
-		return vec3(1.0, val*4.0, 1.0);
+		const int numColors = 4;
+		vec3 colors[numColors+1];
+		colors[0] = vec3(0.0, 0.0, 0.0);
+		colors[1] = vec3(1.0, 0.0, 0.0);
+		colors[2] = vec3(0.0, 1.0, 0.0);
+		colors[3] = vec3(1.0, 0.0, 1.0);
+		colors[4] = vec3(1.0, 1.0, 1.0);
+
+		for (int i=0; i<numColors; i++) {
+			if (val<=1.0/float(numColors)) {
+				float v = val*float(numColors);
+				return (1.0-v)*colors[i] + v*colors[i+1];
+			}
+			val -= 1.0/float(numColors);
+		}
+		return colors[numColors];
 	}
 
 	void main(void) {
