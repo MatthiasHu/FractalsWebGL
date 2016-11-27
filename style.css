@@ -11,6 +11,9 @@
 .iterations_input {
 	width: 70px;
 }
+.coordinates_input {
+	width: 100%;
+}
 .controls_table {
 	border-collapse: collapse;
 }

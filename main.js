@@ -6,15 +6,17 @@ function onLoad() {
 	var get = function(id) {return document.getElementById(id);}
 	new FractalPanel(
 		  get("fractal canvas")
-		, get("max iterations"));
+		, get("max iterations")
+		, get("coordinates"));
 }
 
 
 
-function FractalPanel(canvas, iterationsInput) {
+function FractalPanel(canvas, iterationsInput, coordinatesInput) {
 	this.canvas = canvas;
 	this.mouse = {lastPosition: {x:0, y:0}, upIsClick: false};
 	this.iterationsInput = iterationsInput;
+	this.coordinatesInput = coordinatesInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
 	this.loc = null; // the pose in 4d space (2d complex space)
@@ -80,8 +82,12 @@ function FractalPanel(canvas, iterationsInput) {
 		  "input"
 		, function(event) {that.onIterationsChanged(event);}
 		, false);
+	this.coordinatesInput.addEventListener(
+		  "input"
+		, function(event) {that.onCoordinatesChanged(event);}
+		, false);
 
-	this.render();
+	this.update();
 }
 
 FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
@@ -150,6 +156,10 @@ FractalPanel.prototype.updateLocationBuffer = function() {
 		this.gl.DYNAMIC_DRAW);
 }
 
+FractalPanel.prototype.updateCoordinatesInput = function() {
+	this.coordinatesInput.value = JSON.stringify(this.loc);
+}
+
 FractalPanel.prototype.render = function() {
 	this.updateLocationBuffer();
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -159,6 +169,11 @@ FractalPanel.prototype.render = function() {
 	this.gl.vertexAttribPointer(this.shaderLocations.aLocation,
 		4, this.gl.FLOAT, false, 0, 0);
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+}
+
+FractalPanel.prototype.update = function() {
+	this.updateCoordinatesInput();
+	this.render();
 }
 
 FractalPanel.prototype.zoom = function(factor) {
@@ -176,12 +191,12 @@ FractalPanel.prototype.onWheel = function(event) {
 	}
 	if (event.shiftKey) {
 		this.rotate("x", "y", Math.PI*2/120*delta);
-		this.render();
+		this.update();
 	}
 	else {
 		var factor = Math.exp(0.1*delta);
 		this.zoom(factor);
-		this.render();
+		this.update();
 	}
 }
 
@@ -191,18 +206,18 @@ FractalPanel.prototype.onMouseMove = function(event) {
 		if (event.shiftKey) {
 			this.rotate("x", "z", d.x*Math.PI/2);
 			this.rotate("y", "w", d.y*Math.PI/2);
-			this.render();
+			this.update();
 		}
 		else {
 			this.move("x", -d.x*this.loc.scale);
 			this.move("y", -d.y*this.loc.scale);
-			this.render();
+			this.update();
 		}
 	}
 	if (event.buttons==4) { // middle button
 		this.move("z", -d.x*this.loc.scale);
 		this.move("w", -d.y*this.loc.scale);
-		this.render();
+		this.update();
 	}
 }
 
@@ -247,7 +262,7 @@ FractalPanel.prototype.onMouseUp = function(event) {
 		var p = normalizedMousePosition(event);
 		this.move("x", p.x*this.loc.scale);
 		this.move("y", p.y*this.loc.scale);
-		this.render();
+		this.update();
 	}
 }
 
@@ -257,9 +272,44 @@ FractalPanel.prototype.onIterationsChanged = function(event) {
 	val = parseInt(val);
 	if (val>0) {
 		target.value = val;
-		target.fractalPanel.setupShaderProgram(val);
-		target.fractalPanel.render();
+		this.setupShaderProgram(val);
+		this.update();
 	}
+}
+
+FractalPanel.prototype.onCoordinatesChanged = function(event) {
+	var target = event.target;
+	var val = target.value;
+	val = JSON.parse(val);
+	if (validCoordinates(val)) {
+		this.loc = val;
+		this.update();
+	}
+}
+
+function validCoordinates(loc) {
+	return (
+		   "scale" in loc
+		&& "center" in loc
+		&& validVector(loc.center)
+		&& "x" in loc
+		&& validVector(loc.x)
+		&& "y" in loc
+		&& validVector(loc.y)
+		&& "z" in loc
+		&& validVector(loc.z)
+		&& "w" in loc
+		&& validVector(loc.w)
+		);
+}
+
+function validVector(v) {
+	return (
+		   ("zre" in v)
+		&& ("zim" in v)
+		&& ("cre" in v)
+		&& ("zim" in v)
+		);
 }
 
 
