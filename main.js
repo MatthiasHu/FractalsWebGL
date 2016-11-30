@@ -42,9 +42,18 @@ function FractalPanel(canvas, iterationsInput, coordinatesInput) {
 		, scale:2};
 
 	// try to initialize webgl
-	try {this.gl = this.canvas.getContext("webgl");} catch (e) {}
-	if (!this.gl) try {this.gl = this.canvas.getContext("experimental-webgl");}
-		catch (e) {}
+	try {
+		this.gl = this.canvas.getContext(
+			  "webgl"
+			, {preserveDrawingBuffer: true}
+			);
+	} catch (e) {}
+	if (!this.gl) try {
+		this.gl = this.canvas.getContext(
+			  "experimental-webgl"
+			, {preserveDrawingBuffer: true}
+			);
+	} catch (e) {}
 	if (!this.gl) {
 		throw new Error("WebGL context couldn't be initialized.");
 	}
