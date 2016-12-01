@@ -14,6 +14,9 @@
 .coordinates_input {
 	width: 100%;
 }
+.color_stretching_input {
+	width: 500;
+}
 .controls_table {
 	border-collapse: collapse;
 }

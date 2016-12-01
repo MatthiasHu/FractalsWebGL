@@ -7,19 +7,27 @@ function onLoad() {
 	new FractalPanel(
 		  get("fractal canvas")
 		, get("max iterations")
-		, get("coordinates"));
+		, get("coordinates")
+		, get("color stretching"));
 }
 
 
 
-function FractalPanel(canvas, iterationsInput, coordinatesInput) {
+function FractalPanel(
+	  canvas
+	, iterationsInput
+	, coordinatesInput
+	, colorStretchingInput)
+{
 	this.canvas = canvas;
 	this.mouse = {lastPosition: {x:0, y:0}, upIsClick: false};
 	this.iterationsInput = iterationsInput;
 	this.coordinatesInput = coordinatesInput;
+	this.colorStretchingInput = colorStretchingInput;
 	this.gl = null;
 	this.shaderLocations = {}; // will hold junctures to the shaders
 	this.loc = null; // the pose in 4d space (2d complex space)
+	this.colorStretching = 0.0;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
 
@@ -95,6 +103,10 @@ function FractalPanel(canvas, iterationsInput, coordinatesInput) {
 		  "input"
 		, function(event) {that.onCoordinatesChanged(event);}
 		, false);
+	this.colorStretchingInput.addEventListener(
+		  "input"
+		, function(event) {that.onColorStretchingChanged(event);}
+		, false);
 
 	this.update();
 }
@@ -127,6 +139,8 @@ FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
 	this.shaderLocations.aLocation =
 		this.gl.getAttribLocation(shaderProgram, "aLocation");
 	this.gl.enableVertexAttribArray(this.shaderLocations.aLocation);
+	this.shaderLocations.uColorStretching =
+		this.gl.getUniformLocation(shaderProgram, "uColorStretching");
 }
 
 FractalPanel.prototype.initBuffers = function() {
@@ -170,6 +184,7 @@ FractalPanel.prototype.updateCoordinatesInput = function() {
 }
 
 FractalPanel.prototype.render = function() {
+	// pass in vertex positions and location data
 	this.updateLocationBuffer();
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
 	this.gl.vertexAttribPointer(this.shaderLocations.aVertexPosition,
@@ -177,6 +192,10 @@ FractalPanel.prototype.render = function() {
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
 	this.gl.vertexAttribPointer(this.shaderLocations.aLocation,
 		4, this.gl.FLOAT, false, 0, 0);
+	// set color stretching uniform
+	this.gl.uniform1f(this.shaderLocations.uColorStretching,
+		this.colorStretching);
+	// do the rendering
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -295,6 +314,14 @@ FractalPanel.prototype.onCoordinatesChanged = function(event) {
 		this.update();
 	}
 }
+
+FractalPanel.prototype.onColorStretchingChanged = function(event) {
+	var target = event.target;
+	var val = target.value*0.01;
+	this.colorStretching = val;
+	this.update();
+}
+
 
 function validCoordinates(loc) {
 	return (

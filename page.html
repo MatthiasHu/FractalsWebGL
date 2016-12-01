@@ -21,6 +21,7 @@
 	precision mediump float;
 
 	varying vec4 vLocation; // 4d location of this fragment
+	uniform float uColorStretching; // between 0 and 1
 
 	// complex number operations
 	float normQ(vec2 z) {
@@ -64,6 +65,8 @@
 			}
 		}
 		float value = float(iterations)/float(MAXITERATIONS);
+		// stretch colors
+		value = pow(value, 1.0-uColorStretching);
 		gl_FragColor = vec4(toColor(value), 1.0);
 	}
 </script>
@@ -79,6 +82,10 @@ maximum iterations:
 <input type="number" id="max iterations" class="iterations_input">
 </input><br/>
 <input type="text" id="coordinates" class="coordinates_input">
+</input><br/>
+color stretching:
+<input type="range" id="color stretching"
+	class="color_stretching_input" min=0 max=100 value=0>
 </input>
 </div>
 
