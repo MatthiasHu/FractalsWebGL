@@ -36,9 +36,7 @@ function FractalPanel(
 	if (!this.canvas) {
 		throw new Error("Fractal panel needs a canvas.");
 	}
-	this.canvas.fractalPanel = this;
 
-	this.iterationsInput.fractalPanel = this;
 	this.iterationsInput.value = initialMaxIterations;
 
 	this.loc = {
