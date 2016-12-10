@@ -155,14 +155,21 @@ FractalPanel.prototype.createBuffers = function() {
 		4, this.gl.FLOAT, false, 0, 0);
 }
 
-FractalPanel.prototype.updateBuffers = function() {
+FractalPanel.prototype.updateBuffers = function(
+	rect = {left:0, right:1, bottom:0, top:1})
+{
+	// convert rect to gl coordinates
+	var r =
+		{ x: [rect.left*2-1, rect.right*2-1]
+		, y: [rect.bottom*2-1, rect.top*2-1]
+		};
 	// update vertex buffer
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
 	var vertices =
-		[-1, -1, 0
-		, 1, -1, 0
-		,-1,  1, 0
-		, 1,  1, 0
+		[r.x[0], r.y[0], 0
+		,r.x[1], r.y[0], 0
+		,r.x[0], r.y[1], 0
+		,r.x[1], r.y[1], 0
 		];
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(vertices),
@@ -174,10 +181,10 @@ FractalPanel.prototype.updateBuffers = function() {
 	var y = this.loc.y;
 	var s = this.loc.scale;
 	var locationData = [];
-	for (var i=-1; i<=1; i+=2) {
-		for (var j=-1; j<=1; j+=2) {
+	for (var i=0; i<=1; i++) {
+		for (var j=0; j<=1; j++) {
 			locationData = locationData.concat(toArray4d(
-				add4d(add4d(c, mult4d(j*s, x)), mult4d(i*s, y))
+				add4d(add4d(c, mult4d(r.x[j]*s, x)), mult4d(r.y[i]*s, y))
 				));
 		}
 	}
@@ -190,9 +197,11 @@ FractalPanel.prototype.updateCoordinatesInput = function() {
 	this.coordinatesInput.value = JSON.stringify(this.loc);
 }
 
-FractalPanel.prototype.render = function() {
+FractalPanel.prototype.render = function(
+	rect = {left:0, right:1, bottom:0, top:1})
+{
 	// pass in vertex and location data
-	this.updateBuffers();
+	this.updateBuffers(rect);
 	// set color stretching uniform
 	this.gl.uniform1f(this.shaderLocations.uColorStretching,
 		this.colorStretching);
