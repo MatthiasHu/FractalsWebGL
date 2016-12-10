@@ -68,8 +68,7 @@ function FractalPanel(
 
 	this.setupShaderProgram(initialMaxIterations);
 
-	this.initBuffers();
-	this.updateLocationBuffer();
+	this.createBuffers();
 
 	// listen for user input
 	var that = this;
@@ -143,20 +142,9 @@ FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
 		this.gl.getUniformLocation(shaderProgram, "uColorStretching");
 }
 
-FractalPanel.prototype.initBuffers = function() {
-	// create and fill vertex buffer
+FractalPanel.prototype.createBuffers = function() {
+	// create vertex and location buffers
 	this.vertexBuffer = this.gl.createBuffer();
-	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
-	var vertices = 
-		[-1, -1, 0
-		, 1, -1, 0
-		,-1,  1, 0
-		, 1,  1, 0
-		];
-	this.gl.bufferData(this.gl.ARRAY_BUFFER,
-		new Float32Array(vertices),
-		this.gl.STATIC_DRAW);
-	// create location buffer
 	this.locationBuffer = this.gl.createBuffer();
 	// associate buffers to attribute locations
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -167,7 +155,19 @@ FractalPanel.prototype.initBuffers = function() {
 		4, this.gl.FLOAT, false, 0, 0);
 }
 
-FractalPanel.prototype.updateLocationBuffer = function() {
+FractalPanel.prototype.updateBuffers = function() {
+	// update vertex buffer
+	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexBuffer);
+	var vertices =
+		[-1, -1, 0
+		, 1, -1, 0
+		,-1,  1, 0
+		, 1,  1, 0
+		];
+	this.gl.bufferData(this.gl.ARRAY_BUFFER,
+		new Float32Array(vertices),
+		this.gl.STATIC_DRAW);
+	// update location buffer
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
 	var c = this.loc.center;
 	var x = this.loc.x;
@@ -191,8 +191,8 @@ FractalPanel.prototype.updateCoordinatesInput = function() {
 }
 
 FractalPanel.prototype.render = function() {
-	// pass in location data
-	this.updateLocationBuffer();
+	// pass in vertex and location data
+	this.updateBuffers();
 	// set color stretching uniform
 	this.gl.uniform1f(this.shaderLocations.uColorStretching,
 		this.colorStretching);
