@@ -30,6 +30,14 @@ function FractalPanel(
 	this.colorStretching = 0.0;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
+	var subdivisionDegree = 3;
+	this.rendering = { // render in multiple parts...
+		  subdivisionDegree: subdivisionDegree
+		, numParts: Math.pow(2, 2*subdivisionDegree)
+		, currentPart: 0
+		, finalPart: 0
+		, loopRunning: false
+		}
 
 	var initialMaxIterations = 100;
 
@@ -171,7 +179,7 @@ FractalPanel.prototype.updateBuffers = function(
 		];
 	this.gl.bufferData(this.gl.ARRAY_BUFFER,
 		new Float32Array(vertices),
-		this.gl.STATIC_DRAW);
+		this.gl.DYNAMIC_DRAW);
 	// update location buffer
 	this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.locationBuffer);
 	var c = this.loc.center;
@@ -195,21 +203,55 @@ FractalPanel.prototype.updateCoordinatesInput = function() {
 	this.coordinatesInput.value = JSON.stringify(this.loc);
 }
 
-FractalPanel.prototype.render = function(
-	rect = {left:0, right:1, bottom:0, top:1})
-{
-	// pass in vertex and location data
-	this.updateBuffers(rect);
+FractalPanel.prototype.renderPart = function(i) {
 	// set color stretching uniform
 	this.gl.uniform1f(this.shaderLocations.uColorStretching,
 		this.colorStretching);
-	// do the rendering
+	// render part number i
+	var d = this.rendering.subdivisionDegree;
+	var n = Math.pow(2, d);
+	var pos = reverseInterlacedBinary(d, i);
+	var rect =
+		{ left: pos.x/n, right: (pos.x+1)/n
+		, bottom: pos.y/n, top: (pos.y+1)/n
+		};
+	this.updateBuffers(rect);
 	this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+}
+
+FractalPanel.prototype.startRendering = function() {
+	this.rendering.finalPart = this.rendering.currentPart;
+	if (!this.rendering.loopRunning) {
+		this.rendering.loopRunning = true;
+		var that = this;
+		setTimeout(function() {
+				that.renderingLoop();
+			}, 0);
+	}
+}
+
+FractalPanel.prototype.renderingLoop = function() {
+	this.rendering.currentPart++;
+	if (this.rendering.currentPart >= this.rendering.numParts) {
+		this.rendering.currentPart = 0;
+	}
+	// render one part
+	this.renderPart(this.rendering.currentPart);
+	// terminate loop if rendering is finished
+	if (this.rendering.currentPart == this.rendering.finalPart) {
+		this.rendering.loopRunning = false;
+		return;
+	}
+	// restart loop
+	var that = this;
+	setTimeout(function() {
+			that.renderingLoop();
+		}, 0);
 }
 
 FractalPanel.prototype.update = function() {
 	this.updateCoordinatesInput();
-	this.render();
+	this.startRendering();
 }
 
 FractalPanel.prototype.zoom = function(factor) {
@@ -389,4 +431,25 @@ function rot4d(v, w, alpha) {
 
 function toArray4d(v) {
 	return [v.zre, v.zim, v.cre, v.cim];
+}
+
+
+// obscure binary operation for nice rendering order
+
+function reverseInterlacedBinary(length, number) {
+	var binary = [];
+	for (var i=0; i<2*length; i++) {
+		binary[2*length-1-i] = number % 2;
+		number = Math.floor(number/2);
+	}
+	var res = [0, 0];
+	var pow;
+	for (var j=0; j<2; j++) {
+		pow = 1;
+		for (var i=0; i<length; i++) {
+			res[j] += pow*binary[j+2*i];
+			pow *= 2;
+		}
+	}
+	return {x:res[0], y:res[1]};
 }
