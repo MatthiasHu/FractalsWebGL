@@ -30,22 +30,18 @@ function FractalPanel(
 	this.colorStretching = 0.0;
 	this.vertexBuffer = null;
 	this.locationBuffer = null;
-	var subdivisionDegree = 3;
+	this.maxIterations = 100;
 	this.rendering = { // render in multiple parts...
-		  subdivisionDegree: subdivisionDegree
-		, numParts: Math.pow(2, 2*subdivisionDegree)
-		, currentPart: 0
-		, finalPart: 0
-		, loopRunning: false
-		}
-
-	var initialMaxIterations = 100;
+		  loopRunning: false
+		, iterationsPerPart: 1e8
+		};
+	this.adjustSubdivisionDegree();
 
 	if (!this.canvas) {
 		throw new Error("Fractal panel needs a canvas.");
 	}
 
-	this.iterationsInput.value = initialMaxIterations;
+	this.iterationsInput.value = this.maxIterations;
 
 	this.loc = {
 		  center: {zre:0, zim:0, cre:0, cim:0}
@@ -72,7 +68,7 @@ function FractalPanel(
 		throw new Error("WebGL context couldn't be initialized.");
 	}
 
-	this.setupShaderProgram(initialMaxIterations);
+	this.setupShaderProgram();
 
 	this.createBuffers();
 
@@ -116,7 +112,7 @@ function FractalPanel(
 	this.update();
 }
 
-FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
+FractalPanel.prototype.setupShaderProgram = function() {
 	// compiling the shader program
 	var vertexShader = this.gl.createShader(this.gl.VERTEX_SHADER);
 	this.gl.shaderSource(vertexShader,
@@ -127,7 +123,7 @@ FractalPanel.prototype.setupShaderProgram = function(maxIterations) {
 		document.getElementById("fragment shader");
 	// (passing in the iterations maximum)
 	this.gl.shaderSource(fragmentShader,
-		fragShaderScript.innerHTML.replace(/MAXITERATIONS/g, maxIterations));
+		fragShaderScript.innerHTML.replace(/MAXITERATIONS/g, this.maxIterations));
 	this.gl.compileShader(fragmentShader);
 	var shaderProgram = this.gl.createProgram();
 	this.gl.attachShader(shaderProgram, vertexShader);
@@ -201,6 +197,21 @@ FractalPanel.prototype.updateBuffers = function(
 
 FractalPanel.prototype.updateCoordinatesInput = function() {
 	this.coordinatesInput.value = JSON.stringify(this.loc);
+}
+
+FractalPanel.prototype.adjustSubdivisionDegree = function() {
+	var pixels = this.canvas.width * this.canvas.height;
+	var totalIterations = this.maxIterations * pixels;
+	var roughParts = totalIterations / this.rendering.iterationsPerPart;
+	var d = Math.floor(Math.log2(roughParts)/2);
+	this.setSubdivisionDegree(d);
+}
+
+FractalPanel.prototype.setSubdivisionDegree = function(d) {
+	this.rendering.subdivisionDegree = d;
+	this.rendering.numParts = Math.pow(2, 2*d);
+	this.rendering.currentPart = 0;
+	this.rendering.finalPart = 0;
 }
 
 FractalPanel.prototype.renderPart = function(i) {
@@ -350,7 +361,9 @@ FractalPanel.prototype.onIterationsChanged = function(event) {
 	val = parseInt(val);
 	if (val>0) {
 		target.value = val;
-		this.setupShaderProgram(val);
+		this.maxIterations = val;
+		this.adjustSubdivisionDegree();
+		this.setupShaderProgram();
 		this.update();
 	}
 }
